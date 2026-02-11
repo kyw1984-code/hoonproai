@@ -1,4 +1,5 @@
-streamlit
+undetected-chromedriver
 pandas
 openpyxl
-undetected-chromedriver
+setuptools
+streamlit
