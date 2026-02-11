@@ -8,7 +8,7 @@ import glob
 
 # --- [1] 필수 라이브러리 자동 설치 로직 ---
 def install_dependencies():
-    required = {'undetected-chromedriver', 'pandas', 'openpyxl'}
+    required = {'undetected-chromedriver', 'pandas', 'openpyxl', 'setuptools'}
     try:
         import pkg_resources
         installed = {pkg.key for pkg in pkg_resources.working_set}
