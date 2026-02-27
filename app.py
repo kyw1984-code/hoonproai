@@ -1,63 +1,104 @@
 import streamlit as st
 import requests
-import urllib.parse
-import json
+import pandas as pd
+import time
 
-# 페이지 설정
-st.set_page_config(page_title="쿠팡 키워드 소싱기", page_icon="🌳", layout="centered")
+# 페이지 기본 설정
+st.set_page_config(
+    page_title="쿠팡 연관 검색어 추출기",
+    page_icon="🛒",
+    layout="wide"
+)
 
-def get_coupang_autocomplete(keyword):
-    # 쿠팡 자동완성 API (callback을 비워 순수 JSON으로 받음)
-    url = f"https://www.coupang.com/np/search/autoComplete?callback=&keyword={urllib.parse.quote(keyword)}"
+st.title("🛒 쿠팡 자동완성 검색어 추출기")
+st.markdown("쿠팡 검색창에 뜨는 **자동완성 키워드**를 실시간으로 가져옵니다.")
+
+# -------------------------------------------------------------------------
+# 함수: 쿠팡 자동완성 키워드 가져오기
+# -------------------------------------------------------------------------
+def get_coupang_keywords(keyword):
+    # 쿠팡 자동완성 API URL
+    url = "https://completer.coupang.com/complete/GetResult"
     
-    # 🌟 차단 방지를 위한 브라우저 헤더 완벽 위장 (가장 중요)
+    # 봇 차단을 방지하기 위한 헤더 설정 (일반 브라우저인 척 위장)
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
-        "Accept": "application/json, text/javascript, */*; q=0.01",
-        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
         "Referer": "https://www.coupang.com/",
-        "X-Requested-With": "XMLHttpRequest"
+        "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7"
     }
-
+    
+    params = {
+        "keyword": keyword,
+        "resultSize": 20  # 가져올 최대 개수
+    }
+    
     try:
-        # timeout을 설정하여 무한 대기 방지
-        response = requests.get(url, headers=headers, timeout=5)
-        response.raise_for_status() 
+        response = requests.get(url, headers=headers, params=params, timeout=5)
         
-        # 텍스트 형태의 응답을 JSON으로 파싱
-        data = json.loads(response.text)
-        keywords = []
-        
-        # 자동완성 데이터 추출 로직
-        if isinstance(data, list):
-            for item in data:
-                if isinstance(item, dict) and 'keyword' in item:
-                    keywords.append(item['keyword'])
-                    
-        return keywords
+        if response.status_code == 200:
+            # JSON 응답 파싱
+            data = response.json()
+            # 데이터 구조: {'keyword': '...', 'result': [{'keyword': '...', ...}, ...]}
+            
+            # 검색 결과 리스트 추출
+            if "result" in data:
+                keywords = [item["keyword"] for item in data["result"]]
+                return keywords
+            else:
+                return []
+        else:
+            st.error(f"데이터를 가져오는데 실패했습니다. 상태 코드: {response.status_code}")
+            return []
+            
     except Exception as e:
-        st.error(f"데이터를 가져오는 중 오류가 발생했습니다. (IP가 일시적으로 차단되었을 수 있습니다) \n\n 에러: {e}")
+        st.error(f"에러 발생: {e}")
         return []
 
-# UI 구성
-st.title("🌳 쿠팡 자동완성 키워드 추출기")
-st.markdown("사용자가 쿠팡 검색창에 입력 시 노출되는 **실시간 연관 검색어**를 수집합니다.")
+# -------------------------------------------------------------------------
+# 메인 UI
+# -------------------------------------------------------------------------
+with st.form("search_form"):
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        user_input = st.text_input("검색어를 입력하세요 (예: 노트북, 마스크)", placeholder="키워드 입력")
+    with col2:
+        submitted = st.form_submit_button("키워드 추출 🚀")
 
-search_keyword = st.text_input("메인 키워드를 입력하세요:", placeholder="예: 무선 마우스")
-
-if st.button("키워드 추출하기", type="primary"):
-    if search_keyword.strip():
-        with st.spinner('쿠팡에서 키워드 데이터를 수집 중입니다...'):
-            results = get_coupang_autocomplete(search_keyword)
+if submitted and user_input:
+    with st.spinner(f"'{user_input}' 연관 검색어 수집 중..."):
+        # 너무 빠른 반복 요청 방지를 위한 딜레이 (선택 사항)
+        time.sleep(0.5) 
+        
+        result_list = get_coupang_keywords(user_input)
+        
+        if result_list:
+            st.success(f"총 {len(result_list)}개의 키워드를 찾았습니다!")
             
-            if results:
-                st.success(f"성공적으로 {len(results)}개의 연관 키워드를 찾았습니다!")
+            # 결과 표시 (데이터프레임 & 리스트)
+            df = pd.DataFrame(result_list, columns=["연관 키워드"])
+            
+            # 화면 분할
+            res_col1, res_col2 = st.columns(2)
+            
+            with res_col1:
+                st.markdown("### 📋 리스트 보기")
+                st.dataframe(df, use_container_width=True)
+            
+            with res_col2:
+                st.markdown("### 📥 복사하기 쉬운 텍스트")
+                text_output = "\n".join(result_list)
+                st.text_area("결과 복사", value=text_output, height=400)
                 
-                # 가독성을 위해 리스트로 출력
-                st.write("### 📌 추천 키워드 리스트")
-                for i, kw in enumerate(results, 1):
-                    st.write(f"{i}. **{kw}**")
-            else:
-                st.warning("추출된 키워드가 없거나 쿠팡 서버에서 응답을 거부했습니다.")
-    else:
-        st.warning("키워드를 먼저 입력해주세요.")
+                # CSV 다운로드 버튼
+                csv = df.to_csv(index=False).encode('utf-8-sig')
+                st.download_button(
+                    label="CSV로 다운로드",
+                    data=csv,
+                    file_name=f"coupang_{user_input}_keywords.csv",
+                    mime="text/csv",
+                )
+        else:
+            st.warning("연관 검색어가 없거나 가져오지 못했습니다.")
+
+elif submitted and not user_input:
+    st.warning("검색어를 입력해주세요.")
