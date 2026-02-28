@@ -2,28 +2,26 @@ import streamlit as st
 import pandas as pd
 
 # -----------------------------------------------------------
-# 1. 전역 페이지 설정 (맨 위에 딱 한 번만 선언해야 함)
+# 1. 전역 페이지 설정 (맨 위에 필수)
 # -----------------------------------------------------------
 st.set_page_config(page_title="훈프로 통합 솔루션", layout="wide")
 
 # -----------------------------------------------------------
-# 2. 세션 상태 관리 (페이지 이동 로직)
+# 2. 페이지 이동을 위한 상태 관리 초기화
 # -----------------------------------------------------------
-if 'page' not in st.session_state:
-    st.session_state.page = 'home'
+# 'current_page'라는 변수로 현재 보고 있는 페이지를 관리합니다.
+if 'current_page' not in st.session_state:
+    st.session_state.current_page = "🏠 홈"
 
-def go_home():
-    st.session_state.page = 'home'
-
-def go_analyzer():
-    st.session_state.page = 'analyzer'
-
-def go_namer():
-    st.session_state.page = 'namer'
+# 페이지 이동 함수
+def switch_page(page_name):
+    st.session_state.current_page = page_name
+    st.rerun()
 
 # -----------------------------------------------------------
-# 3. 기능 1: 쿠팡 광고 성과 분석기 (함수로 묶음)
+# 3. 기능 함수 정의
 # -----------------------------------------------------------
+
 def run_analyzer():
     st.title("📊 쇼크트리 훈프로 쿠팡 광고 성과 분석기")
     st.markdown("쿠팡 보고서(CSV 또는 XLSX)를 업로드하면 훈프로의 정밀 운영 전략이 자동으로 생성됩니다.")
@@ -40,8 +38,6 @@ def run_analyzer():
 
     # 수수료 금액 계산 (판매가 * 수수료율)
     total_fee_amount = unit_price * (coupang_fee_rate / 100)
-
-    # 최종 마진 계산
     net_unit_margin = unit_price - unit_cost - delivery_fee - total_fee_amount
 
     st.sidebar.divider()
@@ -53,7 +49,6 @@ def run_analyzer():
         margin_rate = (net_unit_margin / unit_price) * 100
         st.sidebar.write(f"**📈 예상 마진율:** {margin_rate:.1f}%")
 
-    # 파일 업로드
     uploaded_file = st.file_uploader("보고서 파일을 선택하세요 (CSV 또는 XLSX)", type=['csv', 'xlsx'])
 
     if uploaded_file is not None:
@@ -137,18 +132,16 @@ def run_analyzer():
                     '실질순이익': '{:,.0f}원'
                 }).applymap(color_profit, subset=['실질순이익']), use_container_width=True)
 
-                # 옵션별 성과 분석
+                # 옵션별 성과
                 target_prod_col = '광고집행 상품명'
                 if target_prod_col in df.columns:
                     st.divider()
                     st.subheader(f"🛍️ 옵션별 성과 분석 ({target_prod_col} 기준)")
-
                     df[target_prod_col] = df[target_prod_col].fillna('상품명 미확인')
                     prod_agg = df.groupby(target_prod_col).agg({
                         '광고비': 'sum', col_qty: 'sum', '노출수': 'sum', '클릭수': 'sum'
                     }).reset_index()
                     prod_agg.columns = ['상품명', '광고비', '판매수량', '노출수', '클릭수']
-
                     prod_agg['실제매출액'] = prod_agg['판매수량'] * unit_price
                     prod_agg['실제ROAS'] = (prod_agg['실제매출액'] / prod_agg['광고비']).fillna(0)
                     prod_agg['실질순이익'] = (prod_agg['판매수량'] * net_unit_margin) - prod_agg['광고비']
@@ -177,7 +170,7 @@ def run_analyzer():
                             '광고비': '{:,.0f}원', '노출수': '{:,.0f}', '클릭수': '{:,.0f}'
                         }), use_container_width=True)
 
-                # 판매 발생 키워드
+                # 키워드 성과
                 if '키워드' in df.columns:
                     df['키워드'] = df['키워드'].fillna('미식별')
                     kw_agg_all = df.groupby('키워드').agg({
@@ -240,9 +233,6 @@ def run_analyzer():
         except Exception as e:
             st.error(f"데이터 처리 중 오류 발생: {e}")
 
-# -----------------------------------------------------------
-# 4. 기능 2: 쿠팡 상품명 생성기 (함수로 묶음)
-# -----------------------------------------------------------
 def run_namer():
     st.title("🏷️ 쇼크트리 훈프로 쿠팡 상품명 제조기")
     st.markdown("입력값이 수정되면 상품명이 **실시간으로 자동 변경**됩니다.")
@@ -265,7 +255,6 @@ def run_namer():
     def clean_join(parts):
         return " ".join([p.strip() for p in parts if p.strip()])
 
-    # 공식: 브랜드 + 타겟 + 시즌 + 제품명 1 + 소구점 + 제품명 2 + 구성
     final_title = clean_join([brand, target, season_str, main_keyword, appeal_point, sub_keyword, set_info])
 
     st.divider()
@@ -295,24 +284,7 @@ def run_namer():
     else:
         st.info("👆 위 칸에 '제품명 1'을 입력하고 엔터를 치세요.")
 
-# -----------------------------------------------------------
-# 5. 메인 홈 화면 및 네비게이션 로직
-# -----------------------------------------------------------
-
-# 사이드바 네비게이션
-st.sidebar.title("📌 메뉴 선택")
-menu_selection = st.sidebar.radio("이동할 페이지를 선택하세요", ["🏠 홈", "📊 광고 성과 분석기", "🏷️ 상품명 제조기"])
-
-# 사이드바 선택에 따라 세션 상태 업데이트 (버튼 외에 사이드바 클릭도 연동)
-if menu_selection == "🏠 홈":
-    go_home()
-elif menu_selection == "📊 광고 성과 분석기":
-    go_analyzer()
-elif menu_selection == "🏷️ 상품명 제조기":
-    go_namer()
-
-# 메인 화면 로직
-if st.session_state.page == 'home':
+def run_home():
     st.title("🚀 쇼크트리 훈프로 통합 솔루션")
     st.markdown("### 쿠팡 셀러를 위한 필수 도구 모음입니다.")
     st.divider()
@@ -322,26 +294,41 @@ if st.session_state.page == 'home':
     with c1:
         st.info("📊 **쿠팡 광고 성과 분석기**")
         st.markdown("광고 보고서를 분석하여 수익성과 운영 전략을 제시합니다.")
+        # 버튼 클릭 시 switch_page 함수 호출
         if st.button("광고 분석기 실행하기", use_container_width=True):
-            go_analyzer()
-            st.rerun()
+            switch_page("📊 광고 성과 분석기")
 
     with c2:
         st.success("🏷️ **쿠팡 상품명 제조기**")
         st.markdown("쿠팡 SEO에 최적화된 상품명을 자동으로 생성합니다.")
+        # 버튼 클릭 시 switch_page 함수 호출
         if st.button("상품명 제조기 실행하기", use_container_width=True):
-            go_namer()
-            st.rerun()
+            switch_page("🏷️ 상품명 제조기")
 
     st.markdown("---")
     st.markdown("#### 💡 사용 방법")
     st.markdown("1. 원하는 도구의 버튼을 클릭하세요.")
-    st.markdown("2. 언제든 왼쪽 사이드바 메뉴를 통해 홈으로 돌아오거나 다른 도구로 이동할 수 있습니다.")
+    st.markdown("2. 언제든 왼쪽 **사이드바 메뉴**를 통해 홈으로 돌아오거나 다른 도구로 이동할 수 있습니다.")
 
-elif st.session_state.page == 'analyzer':
+# -----------------------------------------------------------
+# 4. 메인 실행 로직 (사이드바 + 페이지 라우팅)
+# -----------------------------------------------------------
+
+# 사이드바 메뉴 (Key를 'current_page'로 설정하여 세션 상태와 연동)
+# 이렇게 하면 메인 화면 버튼에서 상태를 바꿔도 사이드바가 자동으로 업데이트됩니다.
+st.sidebar.title("📌 메뉴 선택")
+menu_selection = st.sidebar.radio(
+    "이동할 페이지를 선택하세요", 
+    ["🏠 홈", "📊 광고 성과 분석기", "🏷️ 상품명 제조기"],
+    key='current_page' 
+)
+
+# 선택된 페이지에 따라 함수 실행
+if menu_selection == "🏠 홈":
+    run_home()
+elif menu_selection == "📊 광고 성과 분석기":
     run_analyzer()
-
-elif st.session_state.page == 'namer':
+elif menu_selection == "🏷️ 상품명 제조기":
     run_namer()
 
 # 푸터 (공통)
