@@ -6,11 +6,14 @@ import pandas as pd
 # -----------------------------------------------------------
 st.set_page_config(page_title="쇼크트리 훈프로 통합 솔루션", layout="wide")
 
+# 세션 상태 초기화
 if 'page' not in st.session_state:
     st.session_state.page = "🏠 홈"
 
+# 페이지 이동 함수 (st.rerun() 추가로 즉시 반영)
 def chg_page(page_name):
     st.session_state.page = page_name
+    st.rerun()
 
 # -----------------------------------------------------------
 # 2. [기능 1] 쿠팡 광고 성과 분석기 (훈프로 오리지널 로직)
@@ -43,12 +46,14 @@ def run_analyzer():
 
     if uploaded_file is not None:
         try:
+            # 파일 읽기
             if uploaded_file.name.endswith('.csv'):
                 try: df = pd.read_csv(uploaded_file, encoding='utf-8-sig')
                 except: df = pd.read_csv(uploaded_file, encoding='cp949')
             else:
                 df = pd.read_excel(uploaded_file, engine='openpyxl')
 
+            # 컬럼 전처리
             df.columns = [str(c).strip() for c in df.columns]
             qty_targets = ['총 판매수량(14일)', '총 판매수량(1일)', '총 판매수량', '전환 판매수량', '판매수량']
             col_qty = next((c for c in qty_targets if c in df.columns), None)
@@ -58,7 +63,7 @@ def run_analyzer():
                     if col in df.columns:
                         df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '').replace('-', '0'), errors='coerce').fillna(0)
 
-                # 지면별 요약
+                # 요약 데이터 생성
                 summary = df.groupby('광고 노출 지면').agg({'노출수': 'sum', '클릭수': 'sum', '광고비': 'sum', col_qty: 'sum'}).reset_index()
                 summary.columns = ['지면', '노출수', '클릭수', '광고비', '판매수량']
                 
@@ -74,13 +79,12 @@ def run_analyzer():
                 total_real_roas = total_real_revenue / tot['광고비'] if tot['광고비'] > 0 else 0
                 total_profit = (tot['판매수량'] * net_unit_margin) - tot['광고비']
                 
-                # 전체 데이터 객체 (제안 섹션용)
                 total_data = {
                     '클릭률(CTR)': tot['클릭수'] / tot['노출수'] if tot['노출수'] > 0 else 0,
                     '구매전환율(CVR)': tot['판매수량'] / tot['클릭수'] if tot['클릭수'] > 0 else 0
                 }
                 
-                # 핵심 지표 대시보드
+                # 대시보드 출력
                 st.subheader("📌 핵심 성과 지표")
                 m1, m2, m3, m4 = st.columns(4)
                 p_color = "#FF4B4B" if total_profit >= 0 else "#1C83E1"
@@ -94,12 +98,11 @@ def run_analyzer():
                 for c, (l, v, clr) in zip(cols, vals):
                     c.markdown(f"<div style='background-color:#f0f2f6;padding:15px;border-radius:10px;text-align:center;'> <p style='margin:0;font-size:14px;'>{l}</p><h2 style='margin:0;color:{clr};'>{v}</h2></div>", unsafe_allow_html=True)
 
-                # 상세 표
                 def color_p(val): return f'color: {"red" if val >= 0 else "blue"}; font-weight: bold;'
                 st.write(""); st.subheader("📍 지면별 상세 분석")
                 st.dataframe(summary.style.format({'노출수': '{:,.0f}', '클릭수': '{:,.0f}', '광고비': '{:,.0f}원', '판매수량': '{:,.0f}', '실제매출액': '{:,.0f}원', 'CPC': '{:,.0f}원', '클릭률(CTR)': '{:.2%}', '구매전환율(CVR)': '{:.2%}', '실제ROAS': '{:.2%}', '실질순이익': '{:,.0f}원'}).applymap(color_p, subset=['실질순이익']), use_container_width=True)
 
-                # 옵션별 분석
+                # 옵션별 성과 분석
                 if '광고집행 상품명' in df.columns:
                     st.divider(); st.subheader("🛍️ 옵션별 성과 분석")
                     df['광고집행 상품명'] = df['광고집행 상품명'].fillna('미확인')
@@ -120,7 +123,7 @@ def run_analyzer():
                     bad_kws = kw_df[(kw_df[col_qty]==0) & (kw_df['광고비']>0)].sort_values('광고비', ascending=False)
                     st.text_area("복사해서 제외 등록하세요:", ", ".join(bad_kws['키워드'].astype(str).tolist()))
 
-                # 훈프로 정밀 운영 제안 섹션
+                # 훈프로 정밀 운영 제안
                 st.divider()
                 st.subheader("💡 훈프로의 정밀 운영 제안")
                 col1, col2, col3 = st.columns(3)
@@ -207,26 +210,40 @@ def run_home():
     with c1:
         st.info("📊 **광고 성과 분석기**")
         st.write("ROAS 50% 단위 세분화 분석 및 키워드 제외 제안")
-        if st.button("분석기 바로가기", use_container_width=True): chg_page("📊 광고 분석기")
+        if st.button("광고 분석기 바로가기", use_container_width=True): 
+            chg_page("📊 광고 분석기")
     with c2:
         st.success("🏷️ **상품명 제조기**")
         st.write("클릭을 부르는 최적의 상품명 조합기")
-        if st.button("제조기 바로가기", use_container_width=True): chg_page("🏷️ 상품명 제조기")
+        if st.button("상품명 제조기 바로가기", use_container_width=True): 
+            chg_page("🏷️ 상품명 제조기")
 
 # -----------------------------------------------------------
 # 5. 메인 실행 제어 (네비게이션)
 # -----------------------------------------------------------
 menu = ["🏠 홈", "📊 광고 분석기", "🏷️ 상품명 제조기"]
 st.sidebar.title("🛠️ 메뉴")
-sel = st.sidebar.radio("이동할 페이지 선택", menu, index=menu.index(st.session_state.page))
 
+# 현재 페이지와 동기화된 라디오 버튼 인덱스 찾기
+try:
+    current_index = menu.index(st.session_state.page)
+except ValueError:
+    current_index = 0
+
+sel = st.sidebar.radio("이동할 페이지 선택", menu, index=current_index)
+
+# 사이드바 선택 시 상태 업데이트 및 새로고침
 if sel != st.session_state.page:
-    chg_page(sel)
+    st.session_state.page = sel
     st.rerun()
 
-if st.session_state.page == "🏠 홈": run_home()
-elif st.session_state.page == "📊 광고 분석기": run_analyzer()
-elif st.session_state.page == "🏷️ 상품명 제조기": run_namer()
+# 최종 렌더링
+if st.session_state.page == "🏠 홈":
+    run_home()
+elif st.session_state.page == "📊 광고 분석기":
+    run_analyzer()
+elif st.session_state.page == "🏷️ 상품명 제조기":
+    run_namer()
 
 # 푸터 (공통)
 st.divider()
