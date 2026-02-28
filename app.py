@@ -4,7 +4,7 @@ import streamlit as st
 st.set_page_config(page_title="훈프로 쿠팡 상품명 생성기", layout="centered")
 
 st.title("🏷️ 쇼크트리 훈프로 쿠팡 상품명 제조기")
-st.markdown("쿠팡 SEO 로직에 맞춰 상품명을 자동으로 조합하고 최적화합니다.")
+st.markdown("설정된 공식에 맞춰 상품명을 자동으로 조합합니다.")
 st.divider()
 
 # --- 입력 섹션 ---
@@ -30,63 +30,41 @@ def clean_join(parts):
     # 빈 값 제거하고 공백으로 연결
     return " ".join([p.strip() for p in parts if p.strip()])
 
-# 1. 사용자 요청 공식
-# 공식: 브랜드 + 타겟 + 시즌 + 제품명 1 + 소구점 + 제품명 2 + 몇종세트
-user_title = clean_join([brand, target, season_str, main_keyword, appeal_point, sub_keyword, set_info])
-
-# 2. 훈프로 추천 SEO 공식 (쿠팡 최적화)
-# 의견: 브랜드 직후에 핵심 키워드(제품명1)가 오는 것이 검색 노출에 유리합니다.
-# 소구점(형용사)은 제품명 앞으로 보내 자연스럽게 수식하는 것이 가독성에 좋습니다.
-# 공식: [브랜드] + 소구점 + 타겟/시즌 + 제품명 1 + 제품명 2 + 구성
-seo_title = clean_join([brand, appeal_point, target, season_str, main_keyword, sub_keyword, set_info])
-
-# 3. 가독성 중심 공식 (모바일 최적화)
-# 공식: [브랜드] 제품명 1 + 제품명 2 + (타겟/시즌/소구점) + 구성
-readable_title = clean_join([brand, main_keyword, sub_keyword, target, season_str, appeal_point, set_info])
-
+# 요청하신 공식 적용
+# 공식: 브랜드 + 타겟 + 시즌 + 제품명 1 + 소구점 + 제품명 2 + 구성
+final_title = clean_join([brand, target, season_str, main_keyword, appeal_point, sub_keyword, set_info])
 
 # --- 결과 출력 섹션 ---
 st.divider()
 st.subheader("2. 생성된 상품명 확인")
 
 if main_keyword:
-    # 탭으로 구분하여 보여주기
-    tab1, tab2, tab3 = st.tabs(["사용자 맞춤형", "🏆 쿠팡 SEO 추천", "📱 가독성 추천"])
-
-    with tab1:
-        st.caption("요청하신 공식대로 조합된 상품명입니다.")
-        st.success("공식: 브랜드 + 타겟 + 시즌 + 제품명1 + 소구점 + 제품명2 + 구성")
-        st.text_input("결과 (복사 가능)", value=user_title, key="t1")
-        st.caption(f"글자수: {len(user_title)}자 (공백 포함)")
-
-    with tab2:
-        st.caption("💡 훈프로 추천! 검색 알고리즘이 좋아하는 순서입니다.")
-        st.info("공식: 브랜드 + 소구점 + 타겟/시즌 + 제품명1(핵심) + 제품명2 + 구성")
-        st.markdown("**추천 이유:** 브랜드 뒤에 핵심 키워드가 빨리 나올수록 정확도가 올라갑니다.")
-        st.text_input("결과 (복사 가능)", value=seo_title, key="t2")
-        st.caption(f"글자수: {len(seo_title)}자 (공백 포함)")
-
-    with tab3:
-        st.caption("고객이 모바일에서 한눈에 상품을 파악하기 좋은 순서입니다.")
-        st.warning("공식: 브랜드 + 제품명1 + 제품명2 + (수식어들) + 구성")
-        st.text_input("결과 (복사 가능)", value=readable_title, key="t3")
-        st.caption(f"글자수: {len(readable_title)}자 (공백 포함)")
+    # 탭 없이 단일 결과만 출력
+    st.markdown("##### ✅ 최종 상품명")
+    st.caption("공식: 브랜드 + 타겟 + 시즌 + 제품명1 + 소구점 + 제품명2 + 구성")
+    
+    # 결과 출력 (복사하기 쉽도록)
+    st.text_input("결과", value=final_title, key="result_final")
+    
+    # 글자수 확인
+    text_len = len(final_title)
+    st.caption(f"📏 글자수: {text_len}자 (공백 포함)")
 
     # --- 유효성 검사 및 팁 ---
-    st.divider()
+    st.markdown("---")
     st.subheader("🔍 훈프로의 상품명 진단")
     
     # 1. 글자수 체크
-    if len(seo_title) > 50:
-        st.warning("⚠️ **길이 주의:** 상품명이 50자를 넘으면 모바일 목록에서 뒷부분이 잘릴 수 있습니다. 핵심 키워드를 앞쪽으로 배치하세요.")
+    if text_len > 50:
+        st.warning(f"⚠️ **길이 주의 ({text_len}자):** 50자를 넘으면 모바일 목록에서 뒷부분이 잘릴 수 있습니다.")
     else:
-        st.success("✅ **길이 적합:** 50자 이내로 모바일 가독성이 좋습니다.")
+        st.success(f"✅ **길이 적합 ({text_len}자):** 모바일 가독성이 좋은 길이입니다.")
 
     # 2. 중복 단어 체크
-    words = seo_title.split()
+    words = final_title.split()
     duplicates = set([x for x in words if words.count(x) > 1])
     if duplicates:
-        st.error(f"🚫 **중복 단어 발견:** '{', '.join(duplicates)}' 단어가 중복되었습니다. 쿠팡은 동일 단어 반복을 어뷰징으로 간주할 수 있으니 하나를 삭제하세요.")
+        st.error(f"🚫 **중복 단어 발견:** '{', '.join(duplicates)}' 단어가 중복되었습니다. 쿠팡 어뷰징 방지를 위해 하나를 삭제해주세요.")
     else:
         st.success("✅ **중복 없음:** 깔끔한 키워드 조합입니다.")
 
