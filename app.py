@@ -6,17 +6,15 @@ import pandas as pd
 # -----------------------------------------------------------
 st.set_page_config(page_title="쇼크트리 훈프로 통합 솔루션", layout="wide")
 
-# 세션 상태 초기화
 if 'page' not in st.session_state:
     st.session_state.page = "🏠 홈"
 
-# 페이지 이동 함수 (st.rerun() 추가로 즉시 반영)
 def chg_page(page_name):
     st.session_state.page = page_name
     st.rerun()
 
 # -----------------------------------------------------------
-# 2. [기능 1] 쿠팡 광고 성과 분석기 (훈프로 오리지널 로직)
+# 2. [기능 1] 쿠팡 광고 성과 분석기 (기존 코드 유지)
 # -----------------------------------------------------------
 def run_analyzer():
     st.title("📊 쇼크트리 훈프로 쿠팡 광고 성과 분석기")
@@ -46,15 +44,12 @@ def run_analyzer():
 
     if uploaded_file is not None:
         try:
-            # 파일 읽기 (엑셀 엔진 호환성 처리)
             if uploaded_file.name.endswith('.csv'):
                 try: df = pd.read_csv(uploaded_file, encoding='utf-8-sig')
                 except: df = pd.read_csv(uploaded_file, encoding='cp949')
             else:
-                # openpyxl 에러 방지를 위해 엔진 설정 유지
                 df = pd.read_excel(uploaded_file, engine='openpyxl')
 
-            # 컬럼 전처리
             df.columns = [str(c).strip() for c in df.columns]
             qty_targets = ['총 판매수량(14일)', '총 판매수량(1일)', '총 판매수량', '전환 판매수량', '판매수량']
             col_qty = next((c for c in qty_targets if c in df.columns), None)
@@ -64,7 +59,6 @@ def run_analyzer():
                     if col in df.columns:
                         df[col] = pd.to_numeric(df[col].astype(str).str.replace(',', '').replace('-', '0'), errors='coerce').fillna(0)
 
-                # 요약 데이터 생성
                 summary = df.groupby('광고 노출 지면').agg({'노출수': 'sum', '클릭수': 'sum', '광고비': 'sum', col_qty: 'sum'}).reset_index()
                 summary.columns = ['지면', '노출수', '클릭수', '광고비', '판매수량']
                 
@@ -85,7 +79,6 @@ def run_analyzer():
                     '구매전환율(CVR)': tot['판매수량'] / tot['클릭수'] if tot['클릭수'] > 0 else 0
                 }
                 
-                # 대시보드 출력
                 st.subheader("📌 핵심 성과 지표")
                 m1, m2, m3, m4 = st.columns(4)
                 p_color = "#FF4B4B" if total_profit >= 0 else "#1C83E1"
@@ -103,7 +96,6 @@ def run_analyzer():
                 st.write(""); st.subheader("📍 지면별 상세 분석")
                 st.dataframe(summary.style.format({'노출수': '{:,.0f}', '클릭수': '{:,.0f}', '광고비': '{:,.0f}원', '판매수량': '{:,.0f}', '실제매출액': '{:,.0f}원', 'CPC': '{:,.0f}원', '클릭률(CTR)': '{:.2%}', '구매전환율(CVR)': '{:.2%}', '실제ROAS': '{:.2%}', '실질순이익': '{:,.0f}원'}).applymap(color_p, subset=['실질순이익']), use_container_width=True)
 
-                # 옵션별 성과 분석
                 if '광고집행 상품명' in df.columns:
                     st.divider(); st.subheader("🛍️ 옵션별 성과 분석")
                     df['광고집행 상품명'] = df['광고집행 상품명'].fillna('미확인')
@@ -117,14 +109,12 @@ def run_analyzer():
                     st.markdown("##### 💸 돈만 쓰는 옵션 (판매0)")
                     st.dataframe(prod_agg[(prod_agg['판매수량']==0) & (prod_agg['광고비']>0)].sort_values('광고비', ascending=False), use_container_width=True)
 
-                # 키워드 분석
                 if '키워드' in df.columns:
                     st.divider(); st.subheader("✂️ 제외 키워드 제안")
                     kw_df = df.groupby('키워드').agg({'광고비': 'sum', col_qty: 'sum'}).reset_index()
                     bad_kws = kw_df[(kw_df[col_qty]==0) & (kw_df['광고비']>0)].sort_values('광고비', ascending=False)
                     st.text_area("복사해서 제외 등록하세요:", ", ".join(bad_kws['키워드'].astype(str).tolist()))
 
-                # 훈프로 정밀 운영 제안
                 st.divider()
                 st.subheader("💡 훈프로의 정밀 운영 제안")
                 col1, col2, col3 = st.columns(3)
@@ -178,28 +168,80 @@ def run_analyzer():
                 st.error("💡 해결방법: 터미널(또는 CMD)에 'pip install openpyxl'을 입력하여 설치해 주세요.")
 
 # -----------------------------------------------------------
-# 3. [기능 2] 쿠팡 상품명 제조기
+# 3. [기능 2] 쿠팡 상품명 제조기 (요청하신 코드로 교체됨)
 # -----------------------------------------------------------
 def run_namer():
     st.title("🏷️ 쇼크트리 훈프로 쿠팡 상품명 제조기")
-    st.markdown("가이드에 최적화된 상품명을 실시간 조합합니다.")
+    st.markdown("입력값이 수정되면 상품명이 **실시간으로 자동 변경**됩니다.")
     st.divider()
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        brand = st.text_input("브랜드명", "훈프로")
-        target = st.selectbox("타겟", ["", "남자", "여성", "공용"])
-        season = st.multiselect("시즌", ["봄", "여름", "가을", "겨울", "사계절"])
-    with col2:
-        main_p = st.text_input("핵심 키워드 (필수) *", "")
-        sub_p = st.text_input("보조 소구점", "")
-        unit = st.text_input("구성 (세트/수량)", "1개")
 
-    if main_p:
-        name = f"{brand} {target} {' '.join(season)} {main_p} {sub_p} {unit}".replace("  ", " ").strip()
-        st.subheader("✅ 최적화 상품명")
-        st.code(name)
-        st.caption(f"글자수: {len(name)}자")
+    # --- 입력 섹션 ---
+    st.subheader("1. 상품 정보 입력")
+
+    col1, col2 = st.columns(2)
+
+    # 왼쪽 컬럼: 기본 정보
+    with col1:
+        brand = st.text_input("브랜드 (없으면 공란)", placeholder="예: 나이키, 훈프로")
+        # [요청반영] 타겟 '남자'로 변경
+        target = st.selectbox("타겟 (성별/대상)", ["", "남자", "여성", "남녀공용", "아동", "유아", "키즈", "성인"])
+        season = st.multiselect("시즌 (여러개 선택 가능)", ["봄", "여름", "가을", "겨울", "간절기", "사계절"], default=[])
+
+    # 오른쪽 컬럼: 상품 상세 (순서 변경됨)
+    with col2:
+        # [요청반영] 순서: 제품명1 -> 소구점 -> 제품명2 -> 구성
+        main_keyword = st.text_input("제품명 1 (핵심 키워드) *필수", placeholder="예: 반팔티, 원피스")
+        appeal_point = st.text_input("소구점 (특징/재질/핏)", placeholder="예: 오버핏, 린넨, 구김없는")
+        sub_keyword = st.text_input("제품명 2 (세부 키워드)", placeholder="예: 라운드티, 롱원피스")
+        set_info = st.text_input("구성 (몇종/세트)", placeholder="예: 3종 세트, 1+1")
+
+    # --- 생성 로직 ---
+    # 시즌 리스트를 문자열로 변환
+    season_str = " ".join(season)
+
+    def clean_join(parts):
+        # 빈 값 제거하고 공백으로 연결
+        return " ".join([p.strip() for p in parts if p.strip()])
+
+    # [최종 공식] 브랜드 + 타겟 + 시즌 + 제품명 1 + 소구점 + 제품명 2 + 구성
+    # 입력값 변경 시 즉시 재계산됨
+    final_title = clean_join([brand, target, season_str, main_keyword, appeal_point, sub_keyword, set_info])
+
+    # --- 결과 출력 섹션 ---
+    st.divider()
+    st.subheader("2. 생성된 상품명 확인")
+
+    if main_keyword:
+        st.markdown("##### ✅ 최종 상품명")
+        st.caption("공식: 브랜드 + 타겟 + 시즌 + 제품명1 + 소구점 + 제품명2 + 구성")
+        
+        # [핵심] st.code를 사용하여 실시간 업데이트 + 복사 기능 제공
+        st.code(final_title, language="text")
+        
+        # 글자수 확인
+        text_len = len(final_title)
+        st.caption(f"📏 글자수: {text_len}자 (공백 포함)")
+
+        # --- 유효성 검사 ---
+        st.markdown("---")
+        st.subheader("🔍 훈프로의 상품명 진단")
+        
+        # 1. 글자수 체크
+        if text_len > 50:
+            st.warning(f"⚠️ **길이 주의 ({text_len}자):** 50자를 넘으면 모바일 목록에서 뒷부분이 잘릴 수 있습니다.")
+        else:
+            st.success(f"✅ **길이 적합 ({text_len}자):** 모바일 가독성이 좋은 길이입니다.")
+
+        # 2. 중복 단어 체크
+        words = final_title.split()
+        duplicates = set([x for x in words if words.count(x) > 1])
+        if duplicates:
+            st.error(f"🚫 **중복 단어 발견:** '{', '.join(duplicates)}' 단어가 중복되었습니다. 쿠팡 어뷰징 방지를 위해 하나를 삭제해주세요.")
+        else:
+            st.success("✅ **중복 없음:** 깔끔한 키워드 조합입니다.")
+
+    else:
+        st.info("👆 위 칸에 '제품명 1'을 입력하고 엔터를 치세요.")
 
 # -----------------------------------------------------------
 # 4. [기능 3] 홈 화면
@@ -213,11 +255,13 @@ def run_home():
     with c1:
         st.info("📊 **광고 성과 분석기**")
         st.write("ROAS 50% 단위 세분화 분석 및 키워드 제외 제안")
+        # 버튼 명칭 변경 및 한 번 클릭으로 이동하도록 로직 수정
         if st.button("광고 분석기 바로가기", use_container_width=True): 
             chg_page("📊 광고 분석기")
     with c2:
         st.success("🏷️ **상품명 제조기**")
         st.write("클릭을 부르는 최적의 상품명 조합기")
+        # 버튼 명칭 변경 및 한 번 클릭으로 이동하도록 로직 수정
         if st.button("상품명 제조기 바로가기", use_container_width=True): 
             chg_page("🏷️ 상품명 제조기")
 
@@ -227,6 +271,7 @@ def run_home():
 menu = ["🏠 홈", "📊 광고 분석기", "🏷️ 상품명 제조기"]
 st.sidebar.title("🛠️ 메뉴")
 
+# 현재 페이지와 동기화된 라디오 버튼 인덱스 찾기
 try:
     current_index = menu.index(st.session_state.page)
 except ValueError:
@@ -234,10 +279,12 @@ except ValueError:
 
 sel = st.sidebar.radio("이동할 페이지 선택", menu, index=current_index)
 
+# 사이드바 메뉴 선택 시 페이지 이동 처리
 if sel != st.session_state.page:
     st.session_state.page = sel
     st.rerun()
 
+# 최종 페이지 렌더링
 if st.session_state.page == "🏠 홈":
     run_home()
 elif st.session_state.page == "📊 광고 분석기":
