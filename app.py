@@ -235,8 +235,9 @@ def run_analyzer():
 
 
 
-    except Exception as e:
- as e: st.error(f"오류: {e}")
+     except Exception as e:
+
+        st.error(f"데이터 처리 중 오류 발생: {e}")
 
 # -----------------------------------------------------------
 # 3. [기능 2] 쿠팡 상품명 제조기
@@ -298,4 +299,5 @@ elif st.session_state.page == "🏷️ 상품명 제조기": run_namer()
 # 푸터 (공통)
 st.divider()
 st.markdown("<div style='text-align: center;'><a href='https://hoonpro.liveklass.com/' target='_blank'>🏠 쇼크트리 훈프로 홈페이지 바로가기</a></div>", unsafe_allow_html=True)
+
 
