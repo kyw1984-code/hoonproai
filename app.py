@@ -46,11 +46,12 @@ def run_analyzer():
 
     if uploaded_file is not None:
         try:
-            # 파일 읽기
+            # 파일 읽기 (엑셀 엔진 호환성 처리)
             if uploaded_file.name.endswith('.csv'):
                 try: df = pd.read_csv(uploaded_file, encoding='utf-8-sig')
                 except: df = pd.read_csv(uploaded_file, encoding='cp949')
             else:
+                # openpyxl 에러 방지를 위해 엔진 설정 유지
                 df = pd.read_excel(uploaded_file, engine='openpyxl')
 
             # 컬럼 전처리
@@ -173,6 +174,8 @@ def run_analyzer():
 
         except Exception as e:
             st.error(f"데이터 처리 중 오류 발생: {e}")
+            if "openpyxl" in str(e):
+                st.error("💡 해결방법: 터미널(또는 CMD)에 'pip install openpyxl'을 입력하여 설치해 주세요.")
 
 # -----------------------------------------------------------
 # 3. [기능 2] 쿠팡 상품명 제조기
@@ -224,7 +227,6 @@ def run_home():
 menu = ["🏠 홈", "📊 광고 분석기", "🏷️ 상품명 제조기"]
 st.sidebar.title("🛠️ 메뉴")
 
-# 현재 페이지와 동기화된 라디오 버튼 인덱스 찾기
 try:
     current_index = menu.index(st.session_state.page)
 except ValueError:
@@ -232,12 +234,10 @@ except ValueError:
 
 sel = st.sidebar.radio("이동할 페이지 선택", menu, index=current_index)
 
-# 사이드바 선택 시 상태 업데이트 및 새로고침
 if sel != st.session_state.page:
     st.session_state.page = sel
     st.rerun()
 
-# 최종 렌더링
 if st.session_state.page == "🏠 홈":
     run_home()
 elif st.session_state.page == "📊 광고 분석기":
