@@ -488,8 +488,6 @@ if uploaded_file is not None:
 
 st.divider()
 
-st.markdown("<div style='text-align: center;'><a href='https://hoonpro.liveklass.com/' target='_blank'>🏠 쇼크트리 훈프로 홈페이지 바로가기</a></div>",
-
 # -----------------------------------------------------------
 # 3. 기능 2: 쿠팡 상품명 제조기
 # -----------------------------------------------------------
@@ -560,4 +558,5 @@ elif st.session_state.nav_page == "🏷️ 상품명 제조기":
 # 공통 푸터
 st.divider()
 st.markdown("<div style='text-align: center;'><a href='https://hoonpro.liveklass.com/' target='_blank'>🏠 쇼크트리 훈프로 홈페이지 바로가기</a></div>", unsafe_allow_html=True)
+
 
